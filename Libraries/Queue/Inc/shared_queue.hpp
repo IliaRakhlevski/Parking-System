@@ -50,6 +50,8 @@ public:
     bool is_full() const;
 
     std::size_t size() const;
+    
+    bool is_valid() const;
 
 private:
 

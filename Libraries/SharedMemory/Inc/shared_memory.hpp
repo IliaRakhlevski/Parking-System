@@ -15,7 +15,7 @@ public:
 
     bool create();
     bool attach();
-    void detach();
+    bool detach();
     bool remove();
 
     void *data();

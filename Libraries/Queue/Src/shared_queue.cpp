@@ -95,6 +95,20 @@ SharedQueue::SharedQueue(SharedMemory *shared_memory,
     }
 }
 
+/**
+ * @brief Check whether the shared queue was initialized successfully.
+ *
+ * @return
+ *      - true  Queue is ready for use.
+ *      - false Queue initialization failed.
+ */
+bool SharedQueue::is_valid() const
+{
+    return (header_ != nullptr) &&
+           (data_ != nullptr) &&
+           (semaphore_ != SEM_FAILED);
+}
+
 
 /**
  * @brief Destroy SharedQueue object.

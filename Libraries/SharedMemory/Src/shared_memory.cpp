@@ -89,7 +89,6 @@ bool SharedMemory::attach()
 
     if (shm_id_ == -1)
     {
-        LOG_ERROR("shmget() attach failed: %s", std::strerror(errno));
         return false;
     }
 
@@ -97,7 +96,6 @@ bool SharedMemory::attach()
 
     if (addr_ == (void *)-1)
     {
-        LOG_ERROR("shmat() attach failed: %s", std::strerror(errno));
         addr_ = nullptr;
         return false;
     }
@@ -106,19 +104,29 @@ bool SharedMemory::attach()
 }
 
 /**
- * @brief Detach shared memory segment.
+ * @brief Detach the shared memory segment.
+ *
+ * @return
+ *      - true  Shared memory detached successfully.
+ *      - false Failed to detach shared memory.
  */
-void SharedMemory::detach()
+bool SharedMemory::detach()
 {
-    if (addr_ != nullptr)
+    if (addr_ == nullptr)
     {
-        if (shmdt(addr_) == -1)
-        {
-            LOG_ERROR("shmdt() failed: %s", std::strerror(errno));
-        }
-
-        addr_ = nullptr;
+        return true;
     }
+
+    if (shmdt(addr_) == -1)
+    {
+        LOG_ERROR("shmdt() failed: %s", std::strerror(errno));
+
+        return false;
+    }
+
+    addr_ = nullptr;
+
+    return true;
 }
 
 /**
