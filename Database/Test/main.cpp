@@ -10,6 +10,8 @@ int main()
         return 1;
     }
 
+    database.run();
+
     if (!database.shutdown())
     {
         return 1;

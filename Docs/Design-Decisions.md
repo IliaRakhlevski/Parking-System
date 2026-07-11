@@ -302,4 +302,49 @@ During shutdown, TcpServer:
 
 TcpServer never removes the shared memory segment because its lifetime is managed by the Database application.
 
+### Startup Independence
+
+The Parking System does not require a predefined startup order.
+
+If the Database application starts first, TcpServer attaches immediately.
+
+If TcpServer starts first, it waits for the shared memory segment and continues initialization after the Database application becomes available.
+
+This allows both applications to be started independently without external synchronization.
+
+
+
+## SQLiteDatabase library
+
+### Decision
+
+SQLite support was moved from the `Database` module into a separate reusable library (`Libraries/SQLiteDatabase`).
+
+### Motivation
+
+The initial design assumed that only the `Database` process would access the SQLite database.
+
+Later, the project architecture was extended with a standalone command-line utility for managing parking information. Since both the `Database` process and the command-line utility require access to the same database, placing all SQLite code inside the `Database` module would result in duplicated SQL logic.
+
+### Result
+
+A dedicated `SQLiteDatabase` library was introduced.
+
+The library is responsible only for SQLite operations:
+
+- opening and closing the database;
+- creating the database schema;
+- executing SQL statements;
+- inserting, updating and retrieving parking data.
+
+The library is independent of:
+
+- IPC;
+- Shared Memory;
+- Shared Queue;
+- TCP communication;
+- application-specific business logic.
+
+Both the `Database` process and the command-line utility use the same library to access the SQLite database.
+
 

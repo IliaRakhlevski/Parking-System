@@ -21,6 +21,11 @@ constexpr std::size_t align_up(std::size_t value, std::size_t alignment)
 }
 
 /**
+ * @brief Maximum time to wait for an IPC message, in milliseconds.
+ */
+constexpr std::size_t IPC_MESSAGE_TIMEOUT_MS = 10000U;
+
+/**
  * @brief Maximum time to wait for the shared memory segment, in milliseconds.
  */
 constexpr std::int64_t IPC_ATTACH_TIMEOUT_MS = 10000U;

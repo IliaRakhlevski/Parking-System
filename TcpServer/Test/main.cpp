@@ -9,6 +9,8 @@ int main()
         return 1;
     }
 
+    tcp_server.run();
+
     if (!tcp_server.shutdown())
     {
         return 1;

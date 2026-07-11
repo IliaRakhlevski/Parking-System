@@ -1,7 +1,8 @@
 #include "tcp_server.hpp"
 #include <chrono>
+#include <cstring>
 #include <thread>
-
+#include <csignal>
 
 /**
  * @brief Construct a TcpServer application object.
@@ -282,10 +283,13 @@ bool TcpServer::attach_queues()
  * @brief Shut down the TcpServer application.
  *
  * Releases the local shared queue objects, detaches from the shared
- * memory segment and releases local IPC resources.
+ * memory segment and releases all local IPC resources.
  *
- * The shared memory segment is not removed because it is owned and
- * managed by the Database application.
+ * Worker threads must be stopped and joined before this function
+ * is called.
+ *
+ * The shared memory segment is not removed because it is owned
+ * and managed by the Database application.
  *
  * @return
  *      - true  Shutdown completed successfully.
@@ -293,21 +297,44 @@ bool TcpServer::attach_queues()
  */
 bool TcpServer::shutdown()
 {
+    LOG_INFO("TcpServer shutdown started.");
+
+    /*
+     * Release the local SharedQueue objects.
+     *
+     * The worker threads have already been joined in run(), so they
+     * can no longer access these queues.
+     */
+    LOG_INFO("Releasing shared queues.");
+
     delete database_to_tcp_queue_;
     database_to_tcp_queue_ = nullptr;
 
     delete tcp_to_database_queue_;
     tcp_to_database_queue_ = nullptr;
 
+    /*
+     * The IPC header is located inside shared memory.
+     * Clear the local pointer before detaching from the segment.
+     */
     ipc_header_ = nullptr;
 
+    /*
+     * Detach TcpServer from the shared memory segment.
+     *
+     * TcpServer is not the owner of the segment and therefore must
+     * not remove it.
+     */
     if (shared_memory_ != nullptr)
     {
+        LOG_INFO("Detaching TcpServer from shared memory.");
+
         if (shared_memory_->is_attached())
         {
             if (!shared_memory_->detach())
             {
-                LOG_ERROR("Failed to detach TcpServer from shared memory.");
+                LOG_ERROR(
+                    "Failed to detach TcpServer from shared memory.");
 
                 return false;
             }
@@ -323,3 +350,354 @@ bool TcpServer::shutdown()
 
     return true;
 }
+
+
+/**
+ * @brief Run the TcpServer worker threads.
+ *
+ * Blocks SIGINT, creates the request writer and response reader
+ * threads and waits until the user requests application termination.
+ *
+ * After SIGINT is received, the function clears the running flag,
+ * waits for both worker threads to terminate and restores the
+ * previous signal mask.
+ */
+void TcpServer::run()
+{
+    sigset_t signal_set;
+    sigset_t previous_signal_set;
+    int signal_number = 0;
+    int result;
+
+    /*
+     * Prepare a signal set containing SIGINT.
+     */
+    result = sigemptyset(&signal_set);
+
+    if (result != 0)
+    {
+        LOG_ERROR("Failed to initialize signal set.");
+
+        return;
+    }
+
+    result = sigaddset(&signal_set, SIGINT);
+
+    if (result != 0)
+    {
+        LOG_ERROR("Failed to add SIGINT to signal set.");
+
+        return;
+    }
+
+    /*
+     * Block SIGINT before creating worker threads.
+     *
+     * The created threads inherit this signal mask, allowing the
+     * main thread to receive SIGINT synchronously through sigwait().
+     */
+    result = pthread_sigmask(
+        SIG_BLOCK,
+        &signal_set,
+        &previous_signal_set);
+
+    if (result != 0)
+    {
+        LOG_ERROR("Failed to block SIGINT. Error: %d", result);
+
+        return;
+    }
+
+    /*
+     * Enable execution of the worker thread loops.
+     */
+    running_ = true;
+
+    /*
+     * Create the thread responsible for generating and sending
+     * requests to Database.
+     */
+    result = pthread_create(
+        &request_writer_thread_,
+        nullptr,
+        TcpServer::request_writer_thread,
+        this);
+
+    if (result != 0)
+    {
+        LOG_ERROR(
+            "Failed to create request writer thread. Error: %d",
+            result);
+
+        running_ = false;
+
+        pthread_sigmask(
+            SIG_SETMASK,
+            &previous_signal_set,
+            nullptr);
+
+        return;
+    }
+
+    LOG_INFO("Request writer thread created.");
+
+    /*
+     * Create the thread responsible for receiving responses
+     * from Database.
+     */
+    result = pthread_create(
+        &response_reader_thread_,
+        nullptr,
+        TcpServer::response_reader_thread,
+        this);
+
+    if (result != 0)
+    {
+        LOG_ERROR(
+            "Failed to create response reader thread. Error: %d",
+            result);
+
+        running_ = false;
+
+        /*
+         * The request writer thread was already created, so wait
+         * until it observes running_ == false and terminates.
+         */
+        result = pthread_join(request_writer_thread_, nullptr);
+
+        if (result != 0)
+        {
+            LOG_ERROR(
+                "Failed to join request writer thread. Error: %d",
+                result);
+        }
+
+        pthread_sigmask(
+            SIG_SETMASK,
+            &previous_signal_set,
+            nullptr);
+
+        return;
+    }
+
+    LOG_INFO("Response reader thread created.");
+
+    /*
+     * Wait for the user to request application termination.
+     *
+     * sigwait() blocks only the calling thread. Both worker threads
+     * continue sending requests and receiving responses.
+     */
+    LOG_INFO("TcpServer is running. Press Ctrl+C to stop.");
+
+    result = sigwait(&signal_set, &signal_number);
+
+    if (result != 0)
+    {
+        LOG_ERROR(
+            "Failed while waiting for SIGINT. Error: %d",
+            result);
+    }
+    else
+    {
+        LOG_INFO("SIGINT received.");
+    }
+
+    /*
+     * Request both worker threads to terminate their main loops.
+     */
+    running_ = false;
+
+    /*
+     * Wait until both worker threads have stopped before run()
+     * returns and shutdown() starts releasing IPC resources.
+     */
+    LOG_INFO("Joining TcpServer worker threads.");
+
+    result = pthread_join(request_writer_thread_, nullptr);
+
+    if (result != 0)
+    {
+        LOG_ERROR(
+            "Failed to join request writer thread. Error: %d",
+            result);
+    }
+
+    result = pthread_join(response_reader_thread_, nullptr);
+
+    if (result != 0)
+    {
+        LOG_ERROR(
+            "Failed to join response reader thread. Error: %d",
+            result);
+    }
+
+    /*
+     * Restore the signal mask that was active before run().
+     */
+    result = pthread_sigmask(
+        SIG_SETMASK,
+        &previous_signal_set,
+        nullptr);
+
+    if (result != 0)
+    {
+        LOG_ERROR(
+            "Failed to restore previous signal mask. Error: %d",
+            result);
+    }
+
+    LOG_INFO("TcpServer worker threads stopped.");
+}
+
+/**
+ * @brief Generate test requests and send them to Database.
+ *
+ * Continuously creates test parking requests and sends them through
+ * the TcpServer-to-Database shared queue.
+ *
+ * Requests are generated with increasing request identifiers.
+ * A delay is used between transmissions to avoid filling the queue
+ * too quickly during testing.
+ */
+void TcpServer::request_writer_loop()
+{
+    std::uint64_t request_id = 1U;
+
+    LOG_INFO("Request writer thread started.");
+
+    while (running_)
+    {
+        tcp_to_database_message_t request{};
+
+        request.request_id = request_id;
+        request.action = parking_action_t::START_PARKING;
+
+        std::strncpy(
+            request.vehicle_number,
+            "123-45-678",
+            VEHICLE_NUMBER_SIZE - 1U);
+
+        request.vehicle_number[VEHICLE_NUMBER_SIZE - 1U] = '\0';
+
+        std::strncpy(
+            request.city,
+            "Haifa",
+            CITY_NAME_SIZE - 1U);
+
+        request.city[CITY_NAME_SIZE - 1U] = '\0';
+
+        request.latitude = 32.7940;
+        request.longitude = 34.9896;
+        request.parking_start_time = 1000;
+        request.parking_end_time = 0;
+        request.parking_cost = 0.0;
+
+        if (!tcp_to_database_queue_->push(&request))
+        {
+            LOG_ERROR(
+                "Failed to send request %llu to Database.",
+                static_cast<unsigned long long>(request.request_id));
+
+            std::this_thread::sleep_for(
+                std::chrono::milliseconds(IPC_RETRY_DELAY_MS));
+
+            continue;
+        }
+
+        LOG_INFO(
+            "Request %llu sent to Database.",
+            static_cast<unsigned long long>(request.request_id));
+
+        ++request_id;
+
+        std::this_thread::sleep_for(
+            std::chrono::seconds(1));
+    }
+
+    LOG_INFO("Request writer thread stopped.");
+}
+
+/**
+ * @brief Entry point for the request writer thread.
+ *
+ * Converts the generic thread argument back to a TcpServer object
+ * and starts the request writer loop.
+ *
+ * @param argument Pointer to the TcpServer object.
+ *
+ * @return Always returns nullptr.
+ */
+void* TcpServer::request_writer_thread(void* argument)
+{
+    TcpServer* tcp_server = static_cast<TcpServer*>(argument);
+
+    tcp_server->request_writer_loop();
+
+    return nullptr;
+}
+
+/**
+ * @brief Read responses received from Database.
+ *
+ * Continuously attempts to read responses from the
+ * Database-to-TcpServer shared queue.
+ *
+ * Successfully received responses are validated and logged.
+ * No response routing to TCP clients is performed at this stage.
+ */
+void TcpServer::response_reader_loop()
+{
+    database_to_tcp_message_t response{};
+
+    LOG_INFO("Response reader thread started.");
+
+    while (running_)
+    {
+        if (!database_to_tcp_queue_->pop(&response))
+        {
+            std::this_thread::sleep_for(
+                std::chrono::milliseconds(IPC_RETRY_DELAY_MS));
+
+            continue;
+        }
+
+        if (response.status != ipc_status_t::SUCCESS)
+        {
+            LOG_ERROR(
+                "Database failed to process request %llu.",
+                static_cast<unsigned long long>(response.request_id));
+
+            continue;
+        }
+
+        LOG_INFO(
+            "Response %llu received successfully. "
+            "Parking duration: %u, parking cost: %.2f",
+            static_cast<unsigned long long>(response.request_id),
+            response.parking_duration,
+            response.parking_cost);
+    }
+
+    LOG_INFO("Response reader thread stopped.");
+}
+
+/**
+ * @brief Entry point for the response reader thread.
+ *
+ * Converts the generic thread argument back to a TcpServer object
+ * and starts the response reader loop.
+ *
+ * @param argument Pointer to the TcpServer object.
+ *
+ * @return Always returns nullptr.
+ */
+void* TcpServer::response_reader_thread(void* argument)
+{
+    TcpServer* tcp_server = static_cast<TcpServer*>(argument);
+
+    tcp_server->response_reader_loop();
+
+    return nullptr;
+}
+
