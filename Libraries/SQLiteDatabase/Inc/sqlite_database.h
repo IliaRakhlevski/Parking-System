@@ -44,7 +44,7 @@ int sqlite_database_get_city(sqlite_database_t* database, int city_id, char* cit
 int sqlite_database_start_parking(sqlite_database_t* database, const char* vehicle_number, double latitude,
                                 double longitude, int city_id, int64_t start_time);
 
-int sqlite_database_stop_parking(sqlite_database_t* database, const char* vehicle_number, int64_t end_time, double* cost);
+int sqlite_database_stop_parking(sqlite_database_t* database, const char* vehicle_number, int64_t end_time, int64_t* start_time, double* cost);
 
 #ifdef __cplusplus
 }

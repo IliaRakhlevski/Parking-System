@@ -1,6 +1,7 @@
 #include <chrono>
 #include <thread>
 #include <csignal>
+#include <cstdio>
 #include "database.hpp"
 #include "logger.h"
 #include "config.h"
@@ -28,7 +29,9 @@ Database::Database()
       enable_console_logging_(DEFAULT_ENABLE_CONSOLE_LOGGING),
       running_(false),
       request_queue_mutex_initialized_(false),
-      request_queue_condition_initialized_(false)   
+      request_queue_condition_initialized_(false),
+      sqlite_database_{},
+      sqlite_database_opened_(false)
 {
 }
 
@@ -71,6 +74,28 @@ bool Database::initialize()
     LOG_INFO("Logger initialized.");
 
     LOG_INFO("Configuration loaded.");
+
+    LOG_INFO(
+    "Opening SQLite database '%s'.",
+    database_file_.c_str());
+
+    if (sqlite_database_open(
+            &sqlite_database_,
+            database_file_.c_str()) != 0)
+    {
+        LOG_ERROR("Failed to open SQLite database.");
+        shutdown();
+        return false;
+    }
+
+    sqlite_database_opened_ = true;
+
+    if (sqlite_database_initialize(&sqlite_database_) != 0)
+    {
+        LOG_ERROR("Failed to initialize SQLite database schema.");
+        shutdown();
+        return false;
+    }
 
     if (!initialize_shared_memory())
     {
@@ -257,6 +282,15 @@ bool Database::shutdown()
 
     delete shared_memory_;
     shared_memory_ = nullptr;
+
+    if (sqlite_database_opened_)
+    {
+        LOG_INFO("Closing SQLite database.");
+
+        sqlite_database_close(&sqlite_database_);
+
+        sqlite_database_opened_ = false;
+    }
 
     LOG_INFO("Database shutdown completed.");
 
@@ -475,6 +509,7 @@ void Database::run()
     */
     sigemptyset(&signal_set);
     sigaddset(&signal_set, SIGINT);
+    sigaddset(&signal_set, SIGUSR1);
 
     result = pthread_sigmask(
         SIG_BLOCK,
@@ -568,15 +603,50 @@ void Database::run()
 
     LOG_INFO("Database is running. Press Ctrl+C to stop.");
 
-    result = sigwait(&signal_set, &signal_number);
+    while (running_)
+    {
+        result = sigwait(&signal_set, &signal_number);
+
+        if (result != 0)
+        {
+            LOG_ERROR(
+                "Failed while waiting for a signal. Error: %d",
+                result);
+
+            break;
+        }
+
+        switch (signal_number)
+        {
+            case SIGINT:
+            {
+                LOG_INFO("SIGINT received.");
+
+                running_ = false;
+
+                break;
+            }
+
+            case SIGUSR1:
+            {
+                LOG_INFO("Parking database has been updated.");
+                break;
+            }
+
+            default:
+            {
+                LOG_ERROR(
+                    "Unexpected signal received: %d.",
+                    signal_number);
+
+                break;
+            }
+        }
+    }
 
     if (result != 0)
     {
-        LOG_ERROR("Failed while waiting for SIGINT. Error: %d", result);
-    }
-    else
-    {
-        LOG_INFO("SIGINT received.");
+        LOG_ERROR("Failed while waiting for a signal. Error: %d", result);
     }
 
     /**
@@ -807,10 +877,7 @@ void Database::response_writer_loop()
 
         response = {};
 
-        response.request_id = request.request_id;
-        response.status = ipc_status_t::SUCCESS;
-        response.parking_duration = 3600;
-        response.parking_cost = 12.50;
+        process_database_request(request, response);
 
         if (!database_to_tcp_queue_->push(&response))
         {
@@ -846,3 +913,211 @@ void* Database::response_writer_thread(void* argument)
     return nullptr;
 }
 
+void Database::process_database_request(const tcp_to_database_message_t& request, database_to_tcp_message_t& response)
+{
+    response = {};
+
+    response.request_id = request.request_id;
+
+    std::snprintf(
+        response.vehicle_number,
+        sizeof(response.vehicle_number),
+        "%s",
+        request.vehicle_number);
+
+    switch (request.action)
+    {
+        case parking_action_t::START_PARKING:
+        {
+            process_start_parking_request(request, response);
+
+            break;
+        }
+
+        case parking_action_t::END_PARKING:
+        {
+            process_end_parking_request(request, response);
+
+            break;
+        }
+
+        case parking_action_t::ACKNOWLEDGE:
+        default:
+        {
+            LOG_ERROR(
+                "Invalid parking action received in request %llu.",
+                static_cast<unsigned long long>(request.request_id));
+
+            response.action = request.action;
+            response.status = ipc_status_t::INVALID_REQUEST;
+
+            break;
+        }
+    }
+}
+
+/**
+ * @brief Processes a parking start request.
+ *
+ * Finds the parking city using the received coordinates and creates
+ * a new active parking session in the SQLite database.
+ *
+ * If the parking session is created successfully, an ACKNOWLEDGE
+ * response is prepared for TcpServer.
+ *
+ * @param request Parking start request received from TcpServer.
+ * @param response Response to be sent back to TcpServer.
+ */
+void Database::process_start_parking_request(
+    const tcp_to_database_message_t& request,
+    database_to_tcp_message_t& response)
+{
+    int city_id;
+    int result;
+
+    /*
+     * Find the city whose coordinate area contains
+     * the received vehicle coordinates.
+     */
+    result = sqlite_database_find_city(
+        &sqlite_database_,
+        request.latitude,
+        request.longitude,
+        &city_id);
+
+    if (result != 0)
+    {
+        LOG_ERROR(
+            "Failed to find a parking city for request %llu. "
+            "Coordinates: %.2f, %.2f.",
+            static_cast<unsigned long long>(request.request_id),
+            request.latitude,
+            request.longitude);
+
+        response.action = parking_action_t::ACKNOWLEDGE;
+        response.status = ipc_status_t::INVALID_REQUEST;
+
+        return;
+    }
+
+    /*
+     * Create a new active parking session.
+     *
+     * SQLiteDatabase retrieves and stores the parking price
+     * that is active at the moment the session starts.
+     */
+    result = sqlite_database_start_parking(
+        &sqlite_database_,
+        request.vehicle_number,
+        request.latitude,
+        request.longitude,
+        city_id,
+        request.parking_start_time);
+
+    if (result != 0)
+    {
+        LOG_ERROR(
+            "Failed to start parking for vehicle '%s'. "
+            "Request ID: %llu.",
+            request.vehicle_number,
+            static_cast<unsigned long long>(request.request_id));
+
+        response.action = parking_action_t::ACKNOWLEDGE;
+        response.status = ipc_status_t::DATABASE_ERROR;
+
+        return;
+    }
+
+    /*
+     * Prepare the successful parking registration response.
+     */
+    response.action = parking_action_t::ACKNOWLEDGE;
+    response.status = ipc_status_t::SUCCESS;
+    response.parking_start_time = request.parking_start_time;
+
+    LOG_INFO(
+        "Parking start request %llu processed successfully "
+        "for vehicle '%s'. City ID: %d.",
+        static_cast<unsigned long long>(request.request_id),
+        request.vehicle_number,
+        city_id);
+}
+
+/**
+ * @brief Processes a parking end request.
+ *
+ * Completes the active parking session for the specified vehicle,
+ * retrieves the original parking start time from SQLite, calculates
+ * the parking duration, and prepares the response for TcpServer.
+ *
+ * @param request Parking end request received from TcpServer.
+ * @param response Response to be sent back to TcpServer.
+ */
+void Database::process_end_parking_request(
+    const tcp_to_database_message_t& request,
+    database_to_tcp_message_t& response)
+{
+    std::int64_t parking_start_time;
+    std::int64_t parking_duration;
+    double parking_cost;
+    int result;
+
+    /*
+     * Complete the active parking session and retrieve
+     * its stored start time and calculated cost.
+     */
+    result = sqlite_database_stop_parking(
+        &sqlite_database_,
+        request.vehicle_number,
+        request.parking_end_time,
+        &parking_start_time,
+        &parking_cost);
+
+    if (result != 0)
+    {
+        LOG_ERROR(
+            "Failed to stop parking for vehicle '%s'. "
+            "Request ID: %llu.",
+            request.vehicle_number,
+            static_cast<unsigned long long>(
+                request.request_id));
+
+        response.action = parking_action_t::END_PARKING;
+
+        response.status = ipc_status_t::VEHICLE_NOT_FOUND;
+
+        return;
+    }
+
+    /*
+     * Calculate the parking duration using the start time
+     * stored in the database.
+     */
+    parking_duration = request.parking_end_time - parking_start_time;
+
+    /*
+     * Prepare the successful parking completion response.
+     */
+    response.action = parking_action_t::END_PARKING;
+
+    response.status = ipc_status_t::SUCCESS;
+
+    response.parking_start_time = parking_start_time;
+
+    response.parking_end_time = request.parking_end_time;
+
+    response.parking_duration = parking_duration;
+
+    response.parking_cost = parking_cost;
+
+    LOG_INFO(
+        "Parking end request %llu processed successfully "
+        "for vehicle '%s'. Duration: %lld second(s), "
+        "cost: %.2f.",
+        static_cast<unsigned long long>(
+            request.request_id),
+        request.vehicle_number,
+        static_cast<long long>(
+            parking_duration),
+        parking_cost);
+}

@@ -1017,15 +1017,16 @@ int sqlite_database_start_parking(
 /**
  * @brief Stops an active parking session.
  *
- * Finds the active parking session for the specified vehicle, obtains
- * the city parking price, calculates the parking duration and updates
- * the session with its end time and total cost.
+ * Finds the active parking session for the specified vehicle,
+ * reads the stored parking start time and price, calculates the
+ * parking cost, and updates the session with its end time and cost.
  *
  * Every started parking minute is charged as a complete minute.
  *
  * @param database Pointer to the SQLite database object.
  * @param vehicle_number Vehicle registration number.
  * @param end_time Parking end time as a Unix timestamp.
+ * @param start_time Pointer that receives the stored parking start time.
  * @param cost Pointer that receives the calculated parking cost.
  *
  * @return
@@ -1036,6 +1037,7 @@ int sqlite_database_stop_parking(
     sqlite_database_t* database,
     const char* vehicle_number,
     int64_t end_time,
+    int64_t* start_time,
     double* cost)
 {
     const char* select_sql =
@@ -1055,7 +1057,7 @@ int sqlite_database_stop_parking(
     sqlite3_stmt* update_statement = NULL;
 
     int64_t session_id;
-    int64_t start_time;
+    int64_t stored_start_time;
     int64_t duration_seconds;
     int64_t duration_minutes;
 
@@ -1068,6 +1070,7 @@ int sqlite_database_stop_parking(
         (database->database == NULL) ||
         (vehicle_number == NULL) ||
         (end_time <= 0) ||
+        (start_time == NULL) ||
         (cost == NULL))
     {
         LOG_ERROR(
@@ -1078,8 +1081,8 @@ int sqlite_database_stop_parking(
     }
 
     /*
-     * Find the active parking session and retrieve the price
-     * associated with its city.
+     * Find the active parking session and retrieve
+     * the stored start time and parking price.
      */
     result = sqlite3_prepare_v2(
         database->database,
@@ -1139,7 +1142,7 @@ int sqlite_database_stop_parking(
     session_id =
         sqlite3_column_int64(select_statement, 0);
 
-    start_time =
+    stored_start_time =
         sqlite3_column_int64(select_statement, 1);
 
     price_per_minute =
@@ -1147,28 +1150,31 @@ int sqlite_database_stop_parking(
 
     sqlite3_finalize(select_statement);
 
-    if (end_time < start_time)
+    if (end_time < stored_start_time)
     {
         LOG_ERROR(
-            "Parking end time is earlier than start time.");
+            "Parking end time is earlier than start time "
+            "for vehicle '%s'.",
+            vehicle_number);
 
         return -1;
     }
 
     /*
-     * Calculate the number of started minutes.
-     *
-     * Adding 59 before integer division rounds partial minutes upward.
+     * Calculate the number of started parking minutes.
      */
-    duration_seconds = end_time - start_time;
-    duration_minutes = (duration_seconds + 59) / 60;
+    duration_seconds =
+        end_time - stored_start_time;
+
+    duration_minutes =
+        (duration_seconds + 59) / 60;
 
     calculated_cost =
-        (double)duration_minutes * price_per_minute;
+        (double)duration_minutes *
+        price_per_minute;
 
     /*
-     * Complete the parking session by storing its end time
-     * and calculated cost.
+     * Store the parking end time and calculated cost.
      */
     result = sqlite3_prepare_v2(
         database->database,
@@ -1232,6 +1238,7 @@ int sqlite_database_stop_parking(
 
     sqlite3_finalize(update_statement);
 
+    *start_time = stored_start_time;
     *cost = calculated_cost;
 
     LOG_INFO(

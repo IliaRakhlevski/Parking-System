@@ -6,6 +6,7 @@
 #include "logger.h"
 #include "shared_memory.hpp"
 #include "shared_queue.hpp"
+#include "sqlite_database.h"
 #include <string>
 #include <queue>
 
@@ -30,6 +31,12 @@ private:
     bool initialize_shared_memory();
 
     bool initialize_queues();
+
+    void process_database_request(const tcp_to_database_message_t& request, database_to_tcp_message_t& response);
+
+    void process_start_parking_request(const tcp_to_database_message_t& request, database_to_tcp_message_t& response);
+
+    void process_end_parking_request(const tcp_to_database_message_t& request, database_to_tcp_message_t& response);
 
     static void* request_reader_thread(void* argument);
 
@@ -144,6 +151,16 @@ private:
      * @brief Indicates whether the request queue condition variable was initialized.
      */
     bool request_queue_condition_initialized_;
+
+    /**
+     * @brief SQLite database object.
+     */
+    sqlite_database_t sqlite_database_;
+
+    /**
+     * @brief Indicates whether the SQLite database was opened successfully.
+     */
+    bool sqlite_database_opened_;
 };
 
 

@@ -21,6 +21,16 @@ constexpr std::size_t align_up(std::size_t value, std::size_t alignment)
 }
 
 /**
+ * @brief Default TCP server listening port.
+ */
+constexpr std::uint16_t DEFAULT_TCP_SERVER_PORT = 5000;
+
+/**
+ * @brief Default maximum number of pending TCP connections.
+ */
+constexpr int DEFAULT_TCP_LISTEN_BACKLOG = 10;
+
+/**
  * @brief Maximum time to wait for an IPC message, in milliseconds.
  */
 constexpr std::size_t IPC_MESSAGE_TIMEOUT_MS = 10000U;
@@ -141,8 +151,6 @@ struct tcp_to_database_message_t
 
     std::int64_t parking_start_time;
     std::int64_t parking_end_time;
-
-    double parking_cost;
 };
 
 /**

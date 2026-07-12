@@ -133,6 +133,7 @@ int main(void)
                     &database,
                     "123-45-678",
                     end_time,
+                    &start_time,
                     &parking_cost) == 0)
             {
                 printf("Parking stopped.\n");
