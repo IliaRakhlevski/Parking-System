@@ -1,6 +1,6 @@
-TARGET = bbg_client
+TARGET = bbg_client_arm
 
-CC = gcc
+CC = arm-linux-gnueabihf-gcc
 
 INCLUDES = \
 	-IInclude \
@@ -24,14 +24,14 @@ SRC = \
 	../Libraries/Config/Src/config.c \
 	../Libraries/Logger/Src/logger.c
 
-OBJ = $(SRC:.c=.o)
+OBJ = $(SRC:.c=.arm.o)
 
 all: $(TARGET)
 
 $(TARGET): $(OBJ)
 	$(CC) $(OBJ) -o $(TARGET) $(LDFLAGS)
 
-%.o: %.c
+%.arm.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:

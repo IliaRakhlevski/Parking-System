@@ -1,6 +1,7 @@
 #ifndef IPC_PROTOCOL_HPP
 #define IPC_PROTOCOL_HPP
 
+#include "parking_protocol.h"
 #include "shared_queue.hpp"
 
 #include <cstddef>
@@ -74,17 +75,6 @@ constexpr const char *DEFAULT_TCP_SERVER_LOG_FILE =
  */
 constexpr bool DEFAULT_ENABLE_CONSOLE_LOGGING = true;
 
-/**
- * @brief Maximum length of a vehicle registration number,
- * including the null terminator.
- */
-constexpr std::size_t VEHICLE_NUMBER_SIZE = 16U;
-
-/**
- * @brief Maximum length of a city name,
- * including the null terminator.
- */
-constexpr std::size_t CITY_NAME_SIZE = 32U;
 
 /**
  * @brief Default System V shared memory key.
@@ -104,73 +94,12 @@ enum class ipc_ready_state_t : std::uint32_t
 };
 
 /**
- * @brief Parking operation.
- */
-enum class parking_action_t : std::uint32_t
-{
-    START_PARKING = 0U,
-    END_PARKING,
-    ACKNOWLEDGE
-};
-
-/**
- * @brief IPC request processing status.
- */
-enum class ipc_status_t : std::uint32_t
-{
-    SUCCESS = 0U,
-    INVALID_REQUEST,
-    VEHICLE_NOT_FOUND,
-    DATABASE_ERROR,
-    INTERNAL_ERROR
-};
-
-/**
  * @brief Shared memory header.
  */
 struct ipc_header_t
 {
     ipc_ready_state_t tcp_to_database_queue_ready;
     ipc_ready_state_t database_to_tcp_queue_ready;
-};
-
-/**
- * @brief Message transferred from TcpServer to Database.
- */
-struct tcp_to_database_message_t
-{
-    std::uint64_t request_id;
-
-    parking_action_t action;
-
-    char vehicle_number[VEHICLE_NUMBER_SIZE];
-    char city[CITY_NAME_SIZE];
-
-    double latitude;
-    double longitude;
-
-    std::int64_t parking_start_time;
-    std::int64_t parking_end_time;
-};
-
-/**
- * @brief Message transferred from Database to TcpServer.
- */
-struct database_to_tcp_message_t
-{
-    std::uint64_t request_id;
-
-    parking_action_t action;
-    ipc_status_t status;
-
-    char vehicle_number[VEHICLE_NUMBER_SIZE];
-
-    std::int64_t parking_start_time;
-    std::int64_t parking_end_time;
-
-    std::int64_t parking_duration;
-
-    double parking_cost;
 };
 
 /**
