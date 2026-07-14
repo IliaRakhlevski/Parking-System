@@ -553,7 +553,7 @@ int sqlite_database_find_city(
         sqlite3_finalize(statement);
 
         LOG_DEBUG(
-            "Coordinates %.2f, %.2f belong to city ID %d.",
+            "Coordinates %.2f, %.2f mapped to city ID %d.",
             latitude,
             longitude,
             *city_id);

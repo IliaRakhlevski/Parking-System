@@ -15,7 +15,41 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include <time.h>
+#include <fcntl.h>
+#include <linux/i2c-dev.h>
+#include <sys/ioctl.h>
 
+
+/**
+ * @brief Linux I2C device file used to communicate with STM32.
+ */
+#define STM32_I2C_DEVICE_PATH "/dev/i2c-2"
+
+/**
+ * @brief 7-bit I2C slave address of the STM32 GPS simulator.
+ */
+#define STM32_I2C_ADDRESS 0x42U
+
+
+/**
+ * @brief GPS coordinates received from the STM32 GPS simulator.
+ *
+ * The structure layout must exactly match the structure
+ * used in the STM32 firmware.
+ */
+typedef struct
+{
+    /**
+     * @brief Latitude in decimal degrees.
+     */
+    float latitude;
+
+    /**
+     * @brief Longitude in decimal degrees.
+     */
+    float longitude;
+
+} gps_coordinate_t;
 
 /**
  * @brief Maximum size of a file path stored by the BBG client.
@@ -74,6 +108,91 @@ static bbg_client_config_t bbg_config;
  */
 #define PIPE_WRITE_END  1
 
+
+/**
+ * @brief Open the BBG I2C device and select the STM32 slave.
+ *
+ * Opens the configured Linux I2C device file and configures
+ * the STM32 GPS simulator as the active 7-bit slave device.
+ *
+ * @return
+ *      - I2C device file descriptor on success.
+ *      - -1 on failure.
+ */
+static int i2c_open_stm32(void)
+{
+    int i2c_fd;
+
+    i2c_fd = open(STM32_I2C_DEVICE_PATH, O_RDWR);
+
+    if (i2c_fd == -1)
+    {
+        LOG_ERROR("Failed to open I2C device %s.", STM32_I2C_DEVICE_PATH);
+
+        return -1;
+    }
+
+    if (ioctl(i2c_fd, I2C_SLAVE, STM32_I2C_ADDRESS) == -1)
+    {
+        LOG_ERROR("Failed to select STM32 I2C slave address 0x%02X.", STM32_I2C_ADDRESS);
+
+        close(i2c_fd);
+
+        return -1;
+    }
+
+    LOG_INFO("STM32 I2C slave 0x%02X selected on %s.",
+             STM32_I2C_ADDRESS,
+             STM32_I2C_DEVICE_PATH);
+
+    return i2c_fd;
+}
+
+/**
+ * @brief Read GPS coordinates from the STM32 GPS simulator.
+ *
+ * Reads one GPS coordinate packet from the STM32 over I2C.
+ *
+ * @param i2c_fd Linux I2C device descriptor.
+ * @param coordinate Pointer to the destination structure.
+ *
+ * @return
+ *      - 0  Coordinates successfully read.
+ *      - -1 Read error.
+ */
+static int i2c_read_coordinates(int i2c_fd, gps_coordinate_t *coordinate)
+{
+    ssize_t bytes_read;
+
+    if (coordinate == NULL)
+    {
+        return -1;
+    }
+
+    bytes_read = read(i2c_fd,
+                      coordinate,
+                      sizeof(*coordinate));
+
+    if (bytes_read == -1)
+    {
+        LOG_ERROR("Failed to read GPS coordinates from STM32.");
+
+        return -1;
+    }
+
+    if (bytes_read != (ssize_t)sizeof(*coordinate))
+    {
+        LOG_ERROR("Incomplete GPS coordinate packet received.");
+
+        return -1;
+    }
+
+    LOG_INFO("GPS coordinates received: latitude %.6f, longitude %.6f.",
+             coordinate->latitude,
+             coordinate->longitude);
+
+    return 0;
+}
 
 /**
  * @brief Connect to the Parking System TCP server.
@@ -330,11 +449,6 @@ typedef struct
     const char *vehicle_number;
 
     /**
-     * @brief City name.
-     */
-    const char *city;
-
-    /**
      * @brief Latitude.
      */
     double latitude;
@@ -353,29 +467,35 @@ typedef struct
 
 static const test_event_t test_events[] =
 {
-    { START_PARKING, "12-345-67", "Tel Aviv",  15.0, 15.0, 5 },
-    { START_PARKING, "98-765-43", "Haifa",     25.0, 25.0, 4 },
-    { START_PARKING, "11-222-33", "Jerusalem", 35.0, 35.0, 3 },
-    { START_PARKING, "44-111-22", "Tel Aviv",  15.0, 15.0, 2 },
-    { START_PARKING, "55-222-33", "Haifa",     25.0, 25.0, 3 },
-    { START_PARKING, "66-333-44", "Jerusalem", 35.0, 35.0, 4 },
+    { START_PARKING, "12-345-67", 0.0, 0.0, 5 },
+    { START_PARKING, "98-765-43", 0.0, 0.0, 4 },
+    { START_PARKING, "11-222-33", 0.0, 0.0, 3 },
+    { START_PARKING, "44-111-22", 0.0, 0.0, 2 },
+    { START_PARKING, "55-222-33", 0.0, 0.0, 3 },
+    { START_PARKING, "66-333-44", 0.0, 0.0, 4 },
 
-    { END_PARKING,   "98-765-43", "Haifa",     25.0, 25.0, 2 },
-    { END_PARKING,   "12-345-67", "Tel Aviv",  15.0, 15.0, 2 },
+    { END_PARKING,   "98-765-43", 0.0, 0.0, 2 },
+    { END_PARKING,   "12-345-67", 0.0, 0.0, 2 },
 
-    { START_PARKING, "77-444-55", "Tel Aviv",  15.0, 15.0, 3 },
-    { START_PARKING, "88-555-66", "Haifa",     25.0, 25.0, 2 },
+    { START_PARKING, "77-444-55", 0.0, 0.0, 3 },
+    { START_PARKING, "88-555-66", 0.0, 0.0, 2 },
 
-    { END_PARKING,   "11-222-33", "Jerusalem", 35.0, 35.0, 2 },
-    { END_PARKING,   "44-111-22", "Tel Aviv",  15.0, 15.0, 2 },
+    { END_PARKING,   "11-222-33", 0.0, 0.0, 2 },
+    { END_PARKING,   "44-111-22", 0.0, 0.0, 2 },
 
-    { START_PARKING, "99-666-77", "Jerusalem", 35.0, 35.0, 3 },
+    { START_PARKING, "99-666-77", 0.0, 0.0, 3 },
+    { START_PARKING, "21-111-11", 0.0, 0.0, 2 },
+    { START_PARKING, "22-222-22", 0.0, 0.0, 3 },
+    { START_PARKING, "23-333-33", 0.0, 0.0, 4 },
 
-    { END_PARKING,   "55-222-33", "Haifa",     25.0, 25.0, 2 },
-    { END_PARKING,   "66-333-44", "Jerusalem", 35.0, 35.0, 2 },
-    { END_PARKING,   "77-444-55", "Tel Aviv",  15.0, 15.0, 2 },
-    { END_PARKING,   "88-555-66", "Haifa",     25.0, 25.0, 2 },
-    { END_PARKING,   "99-666-77", "Jerusalem", 35.0, 35.0, 2 },
+    { END_PARKING,   "55-222-33", 0.0, 0.0, 2 },
+    { END_PARKING,   "66-333-44", 0.0, 0.0, 2 },
+    { END_PARKING,   "77-444-55", 0.0, 0.0, 2 },
+    { END_PARKING,   "88-555-66", 0.0, 0.0, 2 },
+    { END_PARKING,   "99-666-77", 0.0, 0.0, 2 },
+    { END_PARKING,   "21-111-11", 0.0, 0.0, 2 },
+    { END_PARKING,   "22-222-22", 0.0, 0.0, 2 },
+    { END_PARKING,   "23-333-33", 0.0, 0.0, 2 }
 };
 
 #define TEST_EVENTS_COUNT (sizeof(test_events) / sizeof(test_events[0]))
@@ -384,15 +504,19 @@ static const test_event_t test_events[] =
  * @brief Generate a test parking event.
  *
  * @param pipe_write_fd Write side of the unnamed pipe.
+ * @param i2c_fd Linux I2C device descriptor used to communicate
+ *               with the STM32 GPS simulator.
  *
  * @return
  *      - 0  Success.
  *      - -1 Failure.
  */
-static int generate_test_message(int pipe_write_fd)
+static int generate_test_message(int pipe_write_fd, int i2c_fd)
 {
     static size_t current_event = 0;
     static uint64_t request_id = 1;
+
+    gps_coordinate_t coordinate;
 
     tcp_to_database_message_t message;
 
@@ -410,12 +534,13 @@ static int generate_test_message(int pipe_write_fd)
             test_events[current_event].vehicle_number,
             VEHICLE_NUMBER_SIZE - 1);
 
-    strncpy(message.city,
-            test_events[current_event].city,
-            CITY_NAME_SIZE - 1);
+    if (i2c_read_coordinates(i2c_fd, &coordinate) != 0)
+    {
+        return -1;
+    }
 
-    message.latitude = test_events[current_event].latitude;
-    message.longitude = test_events[current_event].longitude;
+    message.latitude = coordinate.latitude;
+    message.longitude = coordinate.longitude;
 
     if (message.action == START_PARKING)
     {
@@ -464,6 +589,8 @@ static int generate_test_message(int pipe_write_fd)
  */
 static int i2c_process_run(int pipe_write_fd)
 {
+    int i2c_fd;
+
     if (logger_init(bbg_config.i2c_log_file, bbg_config.console_logging) != 0)
     {
         fprintf(stderr, "Failed to initialize I2C logger.\n");
@@ -475,9 +602,21 @@ static int i2c_process_run(int pipe_write_fd)
 
     LOG_INFO("I2C process started.");
 
+    i2c_fd = i2c_open_stm32();
+
+    if (i2c_fd == -1)
+    {
+        LOG_ERROR("Failed to initialize STM32 I2C communication.");
+
+        logger_close();
+        close(pipe_write_fd);
+
+        return -1;
+    }
+
     while (1)
     {
-        if (generate_test_message(pipe_write_fd) != 0)
+        if (generate_test_message(pipe_write_fd, i2c_fd) != 0)
         {
             break;
         }
@@ -486,6 +625,8 @@ static int i2c_process_run(int pipe_write_fd)
     }
 
     LOG_INFO("I2C process stopped.");
+
+    close(i2c_fd);
 
     logger_close();
 

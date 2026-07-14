@@ -37,5 +37,6 @@ $(TARGET): $(OBJ)
 clean:
 	rm -f $(OBJ)
 	rm -f $(TARGET)
+	find . -type f -name "*.o" -delete
 
 .PHONY: all clean

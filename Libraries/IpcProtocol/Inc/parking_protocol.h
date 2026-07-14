@@ -70,7 +70,6 @@ typedef struct
     parking_action_t action;
 
     char vehicle_number[VEHICLE_NUMBER_SIZE];
-    char city[CITY_NAME_SIZE];
 
     double latitude;
     double longitude;

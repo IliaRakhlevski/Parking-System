@@ -348,3 +348,32 @@ The library is independent of:
 Both the `Database` process and the command-line utility use the same library to access the SQLite database.
 
 
+## BBG Client architecture
+
+### Decision
+
+The BBG Client was implemented as two independent processes: an **I2C process** and a **TCP process**, communicating through an unnamed POSIX pipe.
+
+The I2C process is responsible for receiving data from the STM32 microcontroller and generating parking events. The TCP process is responsible only for communication with the Parking System TCP server.
+
+### Motivation
+
+The STM32 continuously provides GPS coordinates, while communication with the Parking Server is required only when a parking session starts or ends.
+
+Combining hardware communication and network communication into a single process would tightly couple these two independent responsibilities, making the code more difficult to maintain and extend.
+
+Separating them into two dedicated processes provides a clear separation of concerns and allows each process to perform a single well-defined task.
+
+### Result
+
+The BBG Client consists of:
+
+- an **I2C process** responsible for hardware communication and parking event generation;
+- a **TCP process** responsible for TCP communication with the Parking Server;
+- an unnamed POSIX pipe used for inter-process communication.
+
+During development, the STM32 is temporarily replaced by a deterministic parking event generator running inside the I2C process.
+
+When the STM32 firmware becomes available, only the event generator will be replaced. The overall BBG Client architecture and inter-process communication will remain unchanged.
+
+
