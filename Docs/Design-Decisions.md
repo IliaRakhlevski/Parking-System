@@ -377,3 +377,39 @@ During development, the STM32 is temporarily replaced by a deterministic parking
 When the STM32 firmware becomes available, only the event generator will be replaced. The overall BBG Client architecture and inter-process communication will remain unchanged.
 
 
+## PriceUpdater utility
+
+### Decision
+
+A standalone command-line utility (`PriceUpdater`) was introduced for managing parking city information.
+
+The utility directly updates the SQLite database and notifies the running `Database` process using the `SIGUSR1` signal.
+
+### Motivation
+
+The `Database` module is responsible for processing parking requests and maintaining the system state.
+
+Administrative operations, such as adding a city, updating parking prices or deleting a city, are independent from the main parking workflow.
+
+Moving these operations into a separate utility keeps the `Database` process focused on its primary responsibility and avoids mixing administrative functionality with runtime request processing.
+
+### Result
+
+The `PriceUpdater` utility is responsible for:
+
+- adding a new parking city;
+- updating parking prices;
+- deleting parking cities;
+- notifying the `Database` process after a successful database modification.
+
+The utility uses the existing project libraries:
+
+- `Config`;
+- `Logger`;
+- `SQLiteDatabase`.
+
+The `Database` process identifier is obtained from a PID file whose location is defined in the common configuration file.
+
+After every successful database modification, the utility sends the `SIGUSR1` signal to the running `Database` process.
+
+

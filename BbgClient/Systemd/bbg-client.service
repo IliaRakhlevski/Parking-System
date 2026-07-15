@@ -1,0 +1,33 @@
+#
+# Parking System BBG Client systemd service.
+#
+# This unit starts the BeagleBone Green client automatically during
+# system boot and keeps the application running as a background service.
+#
+# Repository location:
+#     BbgClient/Systemd/bbg-client.service
+#
+# Installation location on the BeagleBone Green:
+#     /etc/systemd/system/bbg-client.service
+#
+
+[Unit]
+Description=Parking System BeagleBone Green Client
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+
+# The BBG client uses relative paths for its configuration and log files.
+WorkingDirectory=/root
+
+# Main BBG client executable.
+ExecStart=/root/bbg_client_arm
+
+# Restart the service if the main process exits unexpectedly.
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

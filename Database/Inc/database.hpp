@@ -46,6 +46,10 @@ private:
 
     void response_writer_loop();
 
+    bool write_pid_file();
+
+    bool remove_pid_file();
+
     /**
      * @brief Shared memory object.
      */
@@ -82,6 +86,11 @@ private:
     std::string database_file_;
 
     /**
+     * @brief Path to the file containing the Database process identifier.
+     */
+    std::string pid_file_;
+
+    /**
      * @brief Path to the log file.
      */
     std::string log_file_;
@@ -90,12 +99,6 @@ private:
      * @brief Enable console logging.
      */
     bool enable_console_logging_;
-
-    /**
-     * @brief Path to the SQLite database file.
-     */
-    std::string database_path_;
-
 
     /**
      * @brief Request reader thread identifier.
@@ -161,6 +164,7 @@ private:
      * @brief Indicates whether the SQLite database was opened successfully.
      */
     bool sqlite_database_opened_;
+
 };
 
 

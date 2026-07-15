@@ -2,12 +2,19 @@
 #include <thread>
 #include <csignal>
 #include <cstdio>
+#include <fstream>
+#include <unistd.h>
 #include "database.hpp"
 #include "logger.h"
 #include "config.h"
 
 
 #define DEFAULT_DATABASE_FILE "../Database/parking.db"
+
+/**
+ * @brief Default path to the Database PID file.
+ */
+#define DEFAULT_DATABASE_PID_FILE "../Database/database.pid"
 
 
 /**
@@ -25,6 +32,7 @@ Database::Database()
       shared_memory_key_(IPC_SHARED_MEMORY_KEY),
       shared_memory_size_(IPC_SHARED_MEMORY_SIZE),
       database_file_(DEFAULT_DATABASE_FILE),
+      pid_file_(DEFAULT_DATABASE_PID_FILE),
       log_file_(DEFAULT_DATABASE_LOG_FILE),
       enable_console_logging_(DEFAULT_ENABLE_CONSOLE_LOGGING),
       running_(false),
@@ -74,6 +82,12 @@ bool Database::initialize()
     LOG_INFO("Logger initialized.");
 
     LOG_INFO("Configuration loaded.");
+
+    if (!write_pid_file())
+    {
+        shutdown();
+        return false;
+    }
 
     LOG_INFO(
     "Opening SQLite database '%s'.",
@@ -213,6 +227,11 @@ bool Database::shutdown()
      */
     if (shared_memory_ == nullptr)
     {
+        if (!remove_pid_file())
+        {
+            return false;
+        }
+
         LOG_INFO("Database shutdown completed.");
 
         logger_close();
@@ -292,6 +311,11 @@ bool Database::shutdown()
         sqlite_database_opened_ = false;
     }
 
+    if (!remove_pid_file())
+    {
+        return false;
+    }
+
     LOG_INFO("Database shutdown completed.");
 
     return true;
@@ -321,11 +345,11 @@ bool Database::load_configuration()
           
     database_file_ = config_get_string(&config, "DATABASE_FILE", DEFAULT_DATABASE_FILE);
 
+    pid_file_ = config_get_string(&config, "DATABASE_PID_FILE", DEFAULT_DATABASE_PID_FILE);
+
     log_file_ = config_get_string(&config, "LOG_FILE", DEFAULT_DATABASE_LOG_FILE);
 
     enable_console_logging_ = config_get_int(&config, "ENABLE_CONSOLE_LOGGING", DEFAULT_ENABLE_CONSOLE_LOGGING);
-
-    database_file_ = config_get_string(&config, "DATABASE_FILE", DEFAULT_DATABASE_FILE);
 
     return true;
 }
@@ -1120,4 +1144,83 @@ void Database::process_end_parking_request(
         static_cast<long long>(
             parking_duration),
         parking_cost);
+}
+
+/**
+ * @brief Writes the current Database process identifier to the PID file.
+ *
+ * Opens the configured PID file in truncate mode and writes the current
+ * process identifier to it.
+ *
+ * @return
+ *      - true  PID file created successfully.
+ *      - false Failed to create or write the PID file.
+ */
+bool Database::write_pid_file()
+{
+    std::ofstream pid_file(
+        pid_file_,
+        std::ios::out | std::ios::trunc);
+
+    if (!pid_file.is_open())
+    {
+        LOG_ERROR(
+            "Failed to open Database PID file '%s'.",
+            pid_file_.c_str());
+
+        return false;
+    }
+
+    pid_file << static_cast<long long>(getpid()) << '\n';
+
+    if (!pid_file.good())
+    {
+        LOG_ERROR(
+            "Failed to write Database PID to file '%s'.",
+            pid_file_.c_str());
+
+        return false;
+    }
+
+    LOG_INFO(
+        "Database PID %lld written to '%s'.",
+        static_cast<long long>(getpid()),
+        pid_file_.c_str());
+
+    return true;
+}
+
+/**
+ * @brief Removes the Database PID file.
+ *
+ * Removes the configured PID file from the filesystem. A missing PID file
+ * is treated as a successful result.
+ *
+ * @return
+ *      - true  PID file removed successfully or did not exist.
+ *      - false Failed to remove the PID file.
+ */
+bool Database::remove_pid_file()
+{
+    errno = 0;
+
+    if (std::remove(pid_file_.c_str()) != 0)
+    {
+        if (errno == ENOENT)
+        {
+            return true;
+        }
+
+        LOG_ERROR(
+            "Failed to remove Database PID file '%s'.",
+            pid_file_.c_str());
+
+        return false;
+    }
+
+    LOG_INFO(
+        "Database PID file '%s' removed successfully.",
+        pid_file_.c_str());
+
+    return true;
 }
