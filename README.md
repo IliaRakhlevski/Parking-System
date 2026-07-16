@@ -251,7 +251,7 @@ cd BBGClient
 make
 ```
 
-The resulting ARM executable is then copied to the BeagleBone Green.
+The resulting executable is transferred to the BeagleBone Green using `scp`.
 
 ### Reusable Libraries
 
@@ -263,4 +263,39 @@ The STM32 firmware is built and flashed using STM32CubeIDE.
 
 ---
 
+## Running the System
+
+The Linux applications can be started using the provided startup script:
+
+```bash
+./start_system.sh
+```
+
+Alternatively, the applications can be started manually in the following order:
+
+1. `Database`
+2. `TcpServer`
+
+The `BBGClient` runs as a `systemd` service on the BeagleBone Green.
+
+Finally, flash and run the `STM32GpsSimulator` firmware on the STM32 NUCLEO-F446RE board.
+
+Once all components are running, the STM32 simulator begins generating GPS events automatically.
+
+The `PriceUpdater` utility can be executed at any time to add or remove cities, modify parking tariffs, and notify the `Database` process about configuration changes.
+
+---
+
+## Documentation
+
+Detailed documentation is available in the README files of each module.
+
+- STM32GpsSimulator
+- BBGClient
+- TcpServer
+- Database
+- PriceUpdater
+- Libraries
+
+Additional project documentation, architecture diagrams, and images are available in the `Docs` directory.
 
