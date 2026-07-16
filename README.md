@@ -111,7 +111,7 @@ Encapsulates SQLite operations for city management, parking sessions, and parkin
 
 Provides a C++ abstraction over System V shared memory and serves as the storage layer for shared IPC structures.
 
-#### [SharedQueue](Libraries/SharedQueue/README.md)
+#### [SharedQueue](Libraries/Queue/README.md)
 
 Implements fixed-size FIFO queues directly inside shared memory for inter-process communication.
 
