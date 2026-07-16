@@ -125,8 +125,6 @@ Defines shared message structures, protocol constants, queue layout, and IPC met
 
 The project was developed and tested using real embedded hardware. The STM32 NUCLEO-F446RE board simulates GPS events and communicates with the BeagleBone Green over the I²C bus. The BeagleBone Green runs the Linux applications responsible for communication, request processing, and database management.
 
-![Hardware Setup](Docs/Images/hardware-setup.jpg)
-
 **Hardware Components**
 
 - **BeagleBone Green** — Embedded Linux platform
