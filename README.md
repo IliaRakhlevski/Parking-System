@@ -198,4 +198,29 @@ The BBGClient is deployed as a `systemd` service. During startup it creates two 
 
 ---
 
+## Project Structure
+
+```text
+Parking-System
+│
+├── STM32GpsSimulator      # STM32 GPS simulator firmware (HAL, C)
+├── BBGClient              # BeagleBone Green multi-process client
+├── TcpServer              # Event-driven multi-client TCP server
+├── Database               # Parking processing and IPC owner
+├── PriceUpdater           # Administrative CLI utility
+│
+├── Libraries
+│   ├── Config             # Configuration file parser
+│   ├── Logger             # Thread-safe logging library
+│   ├── SQLiteDatabase     # SQLite access and parking database logic
+│   ├── SharedMemory       # System V shared memory abstraction
+│   ├── SharedQueue        # FIFO queues stored inside shared memory
+│   └── IpcProtocol        # Shared IPC message and layout definitions
+│
+├── Docs                   # Project documentation and images
+└── start_system.sh        # Starts the Linux-side applications
+```
+
+---
+
 
