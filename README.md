@@ -131,7 +131,6 @@ The project was developed and tested using real embedded hardware. The STM32 NUC
 |----------|---------|
 | STM32 NUCLEO-F446RE | GPS simulator and I²C slave |
 | BeagleBone Green | Embedded Linux platform |
-| SQLite | Parking data storage |
 
 ---
 
@@ -142,10 +141,15 @@ The project was developed and tested using real embedded hardware. The STM32 NUC
 | Languages | C11, C++17 |
 | Embedded | STM32 HAL, Embedded Linux |
 | Networking | TCP/IP |
-| IPC | Shared Memory, Shared Queue, Unnamed Pipes, POSIX Signals |
-| Concurrency | POSIX Threads, `select()` |
+| IPC | System V Shared Memory, Shared Queues, Unnamed Pipes, POSIX Signals |
+| Concurrency | POSIX Threads, Mutexes, Condition Variables |
+| Event Handling | `select()` |
 | Database | SQLite |
-| System | systemd |
+| System | `systemd` |
 | Documentation | Doxygen |
 | Build | GNU Make |
 | Version Control | Git |
+
+---
+
+
