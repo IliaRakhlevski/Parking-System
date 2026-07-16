@@ -223,4 +223,44 @@ Parking-System
 
 ---
 
+## Building the Project
+
+The Linux applications are built using GNU Make.
+
+### Native Linux Applications
+
+`TcpServer`, `Database`, and `PriceUpdater` are compiled natively on Ubuntu.
+
+Example:
+
+```bash
+cd TcpServer
+make
+```
+
+The same build procedure applies to the other native Linux applications.
+
+### BBGClient
+
+`BBGClient` is cross-compiled on Ubuntu for the ARM architecture used by the BeagleBone Green.
+
+Example:
+
+```bash
+cd BBGClient
+make
+```
+
+The resulting ARM executable is then copied to the BeagleBone Green.
+
+### Reusable Libraries
+
+The reusable libraries are compiled and linked automatically as part of the applications that use them. They do not normally need to be built separately.
+
+### STM32GpsSimulator
+
+The STM32 firmware is built and flashed using STM32CubeIDE.
+
+---
+
 
