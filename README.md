@@ -127,10 +127,10 @@ The project was developed and tested using real embedded hardware. The STM32 NUC
 
 ![Hardware Setup](Docs/Images/hardware-setup.jpg)
 
-| Component | Purpose |
-|----------|---------|
-| STM32 NUCLEO-F446RE | GPS simulator and I²C slave |
-| BeagleBone Green | Embedded Linux platform |
+**Hardware Components**
+
+- **BeagleBone Green** — Embedded Linux platform
+- **STM32 NUCLEO-F446RE** — GPS simulator and I²C slave
 
 ---
 
