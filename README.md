@@ -120,3 +120,32 @@ Implements fixed-size FIFO queues directly inside shared memory for inter-proces
 Defines shared message structures, protocol constants, queue layout, and IPC metadata used by TcpServer and Database.
 
 ---
+
+## Hardware Platform
+
+The project was developed and tested using real embedded hardware. The STM32 NUCLEO-F446RE board simulates GPS events and communicates with the BeagleBone Green over the I²C bus. The BeagleBone Green runs the Linux applications responsible for communication, request processing, and database management.
+
+![Hardware Setup](Docs/Images/hardware-setup.jpg)
+
+| Component | Purpose |
+|----------|---------|
+| STM32 NUCLEO-F446RE | GPS simulator and I²C slave |
+| BeagleBone Green | Embedded Linux platform |
+| SQLite | Parking data storage |
+
+---
+
+## Technologies
+
+| Category | Technologies |
+|----------|--------------|
+| Languages | C11, C++17 |
+| Embedded | STM32 HAL, Embedded Linux |
+| Networking | TCP/IP |
+| IPC | Shared Memory, Shared Queue, Unnamed Pipes, POSIX Signals |
+| Concurrency | POSIX Threads, `select()` |
+| Database | SQLite |
+| System | systemd |
+| Documentation | Doxygen |
+| Build | GNU Make |
+| Version Control | Git |
