@@ -4,16 +4,16 @@
 
 STM32GpsSimulator emulates a GPS receiver for the Parking-System project.
 
-The simulator periodically changes the current GPS coordinates and provides them to the BeagleBone Green (BBG) over the I²C bus.
+It periodically updates predefined GPS coordinates and provides them to the BeagleBone Green (BBG) over the I²C bus.
 
 ---
 
 ## Features
 
-- STM32 I²C Slave
-- BBG I²C Master support
-- Interrupt-driven communication
-- Fixed GPS coordinate table
+- STM32 HAL
+- I²C Slave
+- Interrupt-driven I²C communication
+- Predefined GPS coordinate table
 - Periodic coordinate update using TIM10
 - Non-blocking data transmission
 
@@ -23,12 +23,18 @@ The simulator periodically changes the current GPS coordinates and provides them
 
 ### I²C
 
-- STM32 : Slave
-- BBG : Master
+- STM32: Slave
+- BBG: Master
+- 7-bit slave address: `0x42`
 
-The BBG requests the current GPS coordinates.
+The BBG requests the current GPS coordinates over I²C.
 
-The STM32 prepares the response in `HAL_I2C_AddrCallback()` and transmits it using interrupt mode.
+The STM32 prepares the response in `HAL_I2C_AddrCallback()` and transmits the data using interrupt mode.
+
+Each transmitted packet contains:
+
+- `float latitude`
+- `float longitude`
 
 ---
 
@@ -36,30 +42,23 @@ The STM32 prepares the response in `HAL_I2C_AddrCallback()` and transmits it usi
 
 GPS coordinates are stored in a predefined lookup table.
 
-Every timer period the simulator switches to the next coordinate.
-
-This approach provides deterministic and repeatable behaviour during testing.
-
----
-
-## Timer
-
-TIM10 is used to periodically advance to the next GPS coordinate.
+TIM10 periodically switches to the next coordinate, providing deterministic and repeatable behaviour during testing.
 
 ---
 
 ## Callbacks
 
-The simulator uses the following HAL callbacks:
+The application uses the following HAL callbacks:
 
 - `HAL_TIM_PeriodElapsedCallback()`
 - `HAL_I2C_AddrCallback()`
-- `HAL_I2C_SlaveTxCpltCallback()`
+- `HAL_I2C_ListenCpltCallback()`
+- `HAL_I2C_ErrorCallback()`
 
 ---
 
-## Build
+## Project Structure
 
-Generated with STM32CubeMX.
+The project was generated with STM32CubeMX.
 
-Application code is implemented in the `Core` directory.
+Application-specific code is located in the `Core` directory.

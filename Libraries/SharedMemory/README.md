@@ -2,32 +2,39 @@
 
 ## Description
 
-SharedMemory is a reusable C++ library that provides a simple wrapper around System V shared memory.
+SharedMemory is a reusable C++ library that provides an object-oriented wrapper around System V shared memory.
 
-The library is designed for inter-process communication (IPC) between Linux applications.
+The library is designed for inter-process communication (IPC) and provides a simple interface for creating, attaching, detaching and removing shared memory segments.
+
+Serves as the storage backend for the SharedQueue library.
+
+---
 
 ## Features
 
-- Object-oriented C++ interface.
-- Uses System V shared memory.
-- Creates shared memory segments.
-- Attaches to existing shared memory segments.
-- Detaches shared memory.
-- Removes shared memory segments.
-- Provides access to the shared memory address.
-- Reports the number of attached processes.
-- Uses the Logger library to report errors.
+- Object-oriented C++ interface
+- Uses System V shared memory
+- Creates new shared memory segments
+- Attaches to existing shared memory segments
+- Detaches shared memory segments
+- Removes shared memory segments
+- Provides direct access to the shared memory address
+- Reports the number of attached processes
+- Reports errors through the Logger library
+
+---
 
 ## Public Interface
 
 ```cpp
 SharedMemory(key_t key, std::size_t size);
+
 ~SharedMemory();
 
 bool create();
 bool attach();
 
-void detach();
+bool detach();
 bool remove();
 
 void *data();
@@ -38,16 +45,45 @@ bool is_attached() const;
 int attached_count() const;
 ```
 
+---
+
+## Lifecycle
+
+Typical usage:
+
+```text
+Create
+   │
+   ▼
+Attach
+   │
+   ▼
+Access shared memory
+   │
+   ▼
+Detach
+   │
+   ▼
+Remove (optional)
+```
+
+The library automatically detaches from shared memory when the object is destroyed.
+
+Removing the shared memory segment is always an explicit application decision.
+
+---
+
 ## Notes
 
-- The destructor automatically detaches shared memory if it is attached.
-- Shared memory is **not** automatically removed.
-- The application is responsible for deciding when to remove the shared memory segment.
+- The constructor only stores the shared memory parameters.
+- `create()` creates a new shared memory segment and attaches it.
+- `attach()` connects to an existing shared memory segment.
+- The destructor automatically detaches the shared memory if it is attached.
+- Shared memory is **not** removed automatically.
+- `remove()` succeeds only when no other processes remain attached.
+
+---
 
 ## Dependencies
 
 - Logger
-
-## Author
-
-Ilia

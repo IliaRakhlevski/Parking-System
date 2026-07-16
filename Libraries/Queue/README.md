@@ -2,20 +2,25 @@
 
 ## Description
 
-SharedQueue is a reusable C++ library that implements a FIFO queue in shared memory.
+SharedQueue is a reusable C++ library that implements a fixed-size FIFO queue directly inside a shared memory segment.
 
-The library is designed for inter-process communication (IPC) between Linux applications. It uses the SharedMemory library to access shared memory and a POSIX named semaphore to synchronize access between processes.
+The library is designed for inter-process communication (IPC). It uses the SharedMemory library as its storage backend and synchronizes access with a POSIX named semaphore, allowing multiple processes to safely exchange data.
+
+---
 
 ## Features
 
-- Object-oriented C++ interface.
-- FIFO queue implementation.
-- Uses shared memory for data storage.
-- Supports multiple queues in a single shared memory segment using offsets.
-- Uses a POSIX named semaphore for synchronization.
-- Fixed-size queue elements.
-- Thread-safe and process-safe queue operations.
-- Uses the Logger library to report errors.
+- Fixed-size FIFO queue stored entirely in shared memory
+- Designed for inter-process communication (IPC)
+- Uses the SharedMemory library as the storage backend
+- Supports multiple queues within a single shared memory segment using offsets
+- Uses a POSIX named semaphore for synchronization
+- Thread-safe and process-safe queue operations
+- Fixed-size queue elements
+- Object-oriented C++ interface
+- Reports errors through the Logger library
+
+---
 
 ## Public Interface
 
@@ -40,7 +45,9 @@ bool is_full() const;
 std::size_t size() const;
 ```
 
-## Queue Layout
+---
+
+## Shared Memory Layout
 
 ```text
 +-----------------------------+
@@ -56,23 +63,23 @@ std::size_t size() const;
 +-----------------------------+
 ```
 
-Multiple queues can be placed inside a single shared memory segment by specifying different offsets.
+Multiple queues can coexist within the same shared memory segment by placing each queue at a different offset.
+
+---
 
 ## Notes
 
 - Queue elements have a fixed size.
 - The queue does not allocate memory dynamically.
-- The SharedMemory object is owned by the application.
-- The constructor opens or creates the named semaphore.
+- The `SharedMemory` object is owned by the application.
+- The constructor creates or opens the named semaphore.
 - The destructor closes the semaphore.
 - The semaphore is not automatically removed from the system.
 - Queue operations return `false` if the queue is full or empty.
+
+---
 
 ## Dependencies
 
 - Logger
 - SharedMemory
-
-## Author
-
-Ilia

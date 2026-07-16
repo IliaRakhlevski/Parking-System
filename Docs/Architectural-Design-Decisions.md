@@ -1,3 +1,25 @@
+# Design Decisions
+
+This document summarizes the major architectural decisions made during the development of the Parking-System project.
+
+Its purpose is to explain why particular technologies, architectures, and design approaches were selected, rather than to describe the implementation details of individual modules.
+
+
+## Overall Architecture
+
+The Parking-System project is divided into several independent applications connected through well-defined interfaces.
+
+Each application has a single primary responsibility:
+
+- STM32GpsSimulator — GPS device simulation
+- BBGClient — hardware gateway
+- TcpServer — network communication
+- Database — IPC owner and business logic
+- PriceUpdater — administrative utility
+
+Shared functionality is implemented in reusable libraries.
+
+
 ## Logger
 
 Logger is a reusable C library.
@@ -106,6 +128,7 @@ The library is not responsible for:
 
 Synchronization will be handled separately.
 
+
 ## SharedQueue Library
 
 ### Language
@@ -129,6 +152,12 @@ Each queue occupies its own region inside the shared memory segment.
 The queue location is determined by an offset from the beginning of shared memory.
 
 This design allows multiple independent queues to be stored inside a single shared memory segment.
+
+### Queue Placement
+
+SharedQueue stores its data directly inside a shared memory segment managed by the SharedMemory library.
+
+This separates memory management from queue management and allows multiple queues to coexist within the same shared memory segment.
 
 ### Queue Structure
 
@@ -226,6 +255,7 @@ The `Database` and `TcpServer` applications exchange data through shared memory.
 The `SharedMemory` and `SharedQueue` libraries implement the IPC mechanisms, while `IpcProtocol` defines the format of the exchanged data.
 
 
+
 ## Database Application
 
 The Database application is responsible for initializing and managing the IPC infrastructure of the Parking System.
@@ -263,6 +293,17 @@ During shutdown it performs the following operations:
 The Database application loads its configuration from a common configuration file shared by all applications in the project.
 
 Parameters that describe the IPC memory layout (queue offsets, queue sizes, shared memory size, etc.) are compile-time constants and are not configurable. Only runtime parameters, such as the shared memory key, database path and logging options, are loaded from the configuration file.
+
+### IPC Ownership
+
+Database owns the complete IPC infrastructure.
+
+Only the Database application creates and removes the shared memory segment.
+
+All other applications attach to IPC resources created by Database.
+
+This guarantees a single owner responsible for the IPC lifetime and avoids concurrent initialization.
+
 
 
 ## TcpServer Application
@@ -312,6 +353,12 @@ If TcpServer starts first, it waits for the shared memory segment and continues 
 
 This allows both applications to be started independently without external synchronization.
 
+### Client Handling
+
+TcpServer uses an event-driven architecture based on select().
+
+This allows a single thread to monitor multiple client sockets without creating one thread per connection, reducing resource usage and simplifying connection management.
+
 
 
 ## SQLiteDatabase library
@@ -319,6 +366,8 @@ This allows both applications to be started independently without external synch
 ### Decision
 
 SQLite support was moved from the `Database` module into a separate reusable library (`Libraries/SQLiteDatabase`).
+
+The library encapsulates all SQL statements. Application modules never execute SQL directly.
 
 ### Motivation
 
@@ -412,4 +461,11 @@ The `Database` process identifier is obtained from a PID file whose location is 
 
 After every successful database modification, the utility sends the `SIGUSR1` signal to the running `Database` process.
 
+### Database Synchronization
+
+PriceUpdater does not communicate with Database through IPC.
+
+Instead, it directly modifies the SQLite database and notifies the running Database process using SIGUSR1.
+
+This keeps administrative operations independent from the runtime communication path.
 
