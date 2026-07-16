@@ -77,7 +77,7 @@ The BeagleBone Green acts as a gateway between the STM32 microcontroller and the
 
 Simulates a GPS receiver running on an STM32 NUCLEO board. The firmware operates as an interrupt-driven I²C slave and periodically updates GPS coordinates using a hardware timer.
 
-### [BBGClient](BBGClient/README.md)
+### [BBGClient](BbgClient/README.md)
 
 Runs on the BeagleBone Green as a `systemd` service. The application consists of two cooperating Linux processes connected by an unnamed pipe. One process communicates with the STM32 over I²C, while the other forwards parking events to the TcpServer over TCP/IP.
 
@@ -93,15 +93,30 @@ The central processing component of the system. It owns the IPC infrastructure, 
 
 Administrative command-line utility for managing parking cities and parking tariffs. After updating the SQLite database, it notifies the Database process using `SIGUSR1` to reload pricing information without restarting the system.
 
-### [Libraries](Libraries/README.md)
+### Reusable Libraries
 
-Reusable libraries shared across multiple applications:
+#### [Config](Libraries/Config/README.md)
 
-- **Config** — Configuration management
-- **Logger** — Centralized logging
-- **SQLiteDatabase** — SQLite wrapper
-- **SharedMemory** — System V shared memory abstraction
-- **SharedQueue** — Shared memory queue implementation
-- **IpcProtocol** — Common IPC data structures and communication protocol
+Loads application settings from configuration files and provides string and integer access by key.
+
+#### [Logger](Libraries/Logger/README.md)
+
+Provides a common thread-safe logging interface with file and optional console output.
+
+#### [SQLiteDatabase](Libraries/SQLiteDatabase/README.md)
+
+Encapsulates SQLite operations for city management, parking sessions, and parking cost calculation.
+
+#### [SharedMemory](Libraries/SharedMemory/README.md)
+
+Provides a C++ abstraction over System V shared memory and serves as the storage layer for shared IPC structures.
+
+#### [SharedQueue](Libraries/SharedQueue/README.md)
+
+Implements fixed-size FIFO queues directly inside shared memory for inter-process communication.
+
+#### [IpcProtocol](Libraries/IpcProtocol/README.md)
+
+Defines shared message structures, protocol constants, queue layout, and IPC metadata used by TcpServer and Database.
 
 ---
