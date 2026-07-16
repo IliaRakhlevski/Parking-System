@@ -176,10 +176,6 @@ Parking prices can be modified while the system is running. The PriceUpdater upd
 
 ![PriceUpdater](Docs/Images/price-updater.png)
 
-Updated parking tariffs are immediately reflected in the SQLite database.
-
-![Parking Cities](Docs/Images/parking-cities.png)
-
 ### Parking Session Database
 
 Each parking event is stored in the SQLite database together with its GPS coordinates, detected city, parking duration, and calculated cost. Active parking sessions remain open until the corresponding vehicle leaves the parking area.
