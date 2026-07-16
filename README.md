@@ -77,31 +77,31 @@ The BeagleBone Green acts as a gateway between the STM32 microcontroller and the
 
 Simulates a GPS receiver running on an STM32 NUCLEO board. The firmware operates as an interrupt-driven I²C slave and periodically updates GPS coordinates using a hardware timer.
 
----
+...
 
 ### BBGClient
 
 Runs on the BeagleBone Green as a `systemd` service. The application consists of two cooperating Linux processes connected by an unnamed pipe. One process communicates with the STM32 over I²C, while the other forwards parking events to the TcpServer over TCP/IP.
 
----
+...
 
 ### TcpServer
 
 An event-driven multi-client TCP server based on `select()`. It accepts parking events from multiple clients, forwards requests to the Database application through shared memory queues, and returns processing results to the originating clients.
 
----
+...
 
 ### Database
 
 The central processing component of the system. It owns the IPC infrastructure, manages the SQLite database, processes parking requests, calculates parking costs, and returns responses through shared memory queues.
 
----
+...
 
 ### PriceUpdater
 
 Administrative command-line utility for managing parking cities and parking tariffs. After updating the SQLite database, it notifies the Database process using `SIGUSR1` to reload pricing information without restarting the system.
 
----
+...
 
 ### Reusable Libraries
 
