@@ -281,7 +281,7 @@ Alternatively, the applications can be started manually in the following order:
 
 The `BBGClient` runs as a `systemd` service on the BeagleBone Green.
 
-Finally, flash and run the `STM32GpsSimulator` firmware on the STM32 NUCLEO-144 development board (STM32F756ZG).
+Finally, flash and run the `STM32GpsSimulator` firmware on the STM32 NUCLEO-144 development board.
 
 Once all components are running, the STM32 simulator begins generating GPS events automatically.
 
