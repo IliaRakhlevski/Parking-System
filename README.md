@@ -123,7 +123,7 @@ Defines shared message structures, protocol constants, queue layout, and IPC met
 
 ## Hardware Platform
 
-The project was developed and tested using real embedded hardware. The STM32 NUCLEO-F446RE board simulates GPS events and communicates with the BeagleBone Green over the I²C bus. The BeagleBone Green runs the Linux applications responsible for communication, request processing, and database management.
+The project was developed and tested using real embedded hardware. The STM32 NUCLEO-144 development board with the STM32F756ZG MCU simulates GPS events and communicates with the BeagleBone Green over the I²C bus. The BeagleBone Green runs the Embedded Linux applications responsible for communication, request processing, and database management.
 
 **Hardware Components**
 
@@ -281,7 +281,7 @@ Alternatively, the applications can be started manually in the following order:
 
 The `BBGClient` runs as a `systemd` service on the BeagleBone Green.
 
-Finally, flash and run the `STM32GpsSimulator` firmware on the STM32 NUCLEO-F446RE board.
+Finally, flash and run the `STM32GpsSimulator` firmware on the STM32 NUCLEO-144 development board (STM32F756ZG).
 
 Once all components are running, the STM32 simulator begins generating GPS events automatically.
 
