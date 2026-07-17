@@ -128,7 +128,7 @@ The project was developed and tested using real embedded hardware. The STM32 NUC
 **Hardware Components**
 
 - **BeagleBone Green** — Embedded Linux platform
-- **STM32 NUCLEO-F446RE** — GPS simulator and I²C slave
+- **STM32 NUCLEO-144 development board (STM32F756ZG)** — GPS simulator and I²C slave
 
 ---
 
@@ -137,7 +137,8 @@ The project was developed and tested using real embedded hardware. The STM32 NUC
 | Category | Technologies |
 |----------|--------------|
 | Languages | C11, C++17 |
-| Embedded | STM32 HAL, Embedded Linux |
+| Embedded Platforms | STM32 HAL, Embedded Linux |
+| Operating Systems | Ubuntu 24.04, Debian Linux (BeagleBone Green) |
 | Networking | TCP/IP |
 | IPC | System V Shared Memory, Shared Queues, Unnamed Pipes, POSIX Signals |
 | Concurrency & Synchronization | POSIX Threads, Mutexes, Condition Variables, POSIX Semaphores |
