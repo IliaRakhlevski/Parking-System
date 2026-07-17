@@ -140,6 +140,7 @@ The project was developed and tested using real embedded hardware. The STM32 NUC
 | Embedded Platforms | STM32 HAL, Embedded Linux |
 | Operating Systems | Ubuntu 24.04 LTS, Debian 13.5 (BeagleBone Green) |
 | Development Tools | STM32CubeIDE, STM32CubeMX, Visual Studio Code |
+| Compiler Toolchains | GCC, GNU Arm Embedded Toolchain, GNU ARM Cross Compiler (arm-linux-gnueabihf) |
 | Networking | TCP/IP |
 | IPC | System V Shared Memory, Shared Queues, Unnamed Pipes, POSIX Signals |
 | Concurrency & Synchronization | POSIX Threads, Mutexes, Condition Variables, POSIX Semaphores |
@@ -156,7 +157,7 @@ The project was developed and tested using real embedded hardware. The STM32 NUC
 
 ### Hardware Setup
 
-The project was developed and tested on real embedded hardware. The STM32 NUCLEO-F446RE board simulates GPS events and communicates with the BeagleBone Green over the I²C bus.
+The project was developed and tested on real embedded hardware. The STM32 NUCLEO-144 development board with the STM32F756ZG MCU simulates GPS events and communicates with the BeagleBone Green over the I²C bus.
 
 ![Hardware Setup](Docs/Images/hardware-setup.jpg)
 
