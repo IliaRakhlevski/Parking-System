@@ -250,7 +250,7 @@ Example:
 
 ```bash
 cd BBGClient
-make
+make -f Makefile.arm
 ```
 
 The resulting executable is transferred to the BeagleBone Green using `scp`.
