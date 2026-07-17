@@ -138,7 +138,8 @@ The project was developed and tested using real embedded hardware. The STM32 NUC
 |----------|--------------|
 | Languages | C11, C++17 |
 | Embedded Platforms | STM32 HAL, Embedded Linux |
-| Operating Systems | Ubuntu 24.04, Debian Linux (BeagleBone Green) |
+| Operating Systems | Ubuntu 24.04 LTS, Debian 13.5 (BeagleBone Green) |
+| Development Tools | STM32CubeIDE, STM32CubeMX, Visual Studio Code |
 | Networking | TCP/IP |
 | IPC | System V Shared Memory, Shared Queues, Unnamed Pipes, POSIX Signals |
 | Concurrency & Synchronization | POSIX Threads, Mutexes, Condition Variables, POSIX Semaphores |
