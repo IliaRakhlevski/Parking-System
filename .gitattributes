@@ -1,2 +1,13 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Exclude third-party STM32 libraries from GitHub language statistics.
+STM32GpsSimulator/Drivers/** linguist-vendored
+
+# Exclude generated build output and STM32 startup/system files.
+STM32GpsSimulator/Debug/** linguist-generated
+STM32GpsSimulator/Core/Startup/** linguist-generated
+STM32GpsSimulator/Core/Src/system_stm32f7xx.c linguist-generated
+STM32GpsSimulator/Core/Src/syscalls.c linguist-generated
+STM32GpsSimulator/Core/Src/sysmem.c linguist-generated
+STM32GpsSimulator/Core/Src/stm32f7xx_hal_msp.c linguist-generated
