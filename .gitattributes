@@ -11,3 +11,6 @@ STM32GpsSimulator/Core/Src/system_stm32f7xx.c linguist-generated
 STM32GpsSimulator/Core/Src/syscalls.c linguist-generated
 STM32GpsSimulator/Core/Src/sysmem.c linguist-generated
 STM32GpsSimulator/Core/Src/stm32f7xx_hal_msp.c linguist-generated
+STM32GpsSimulator/Core/Src/stm32f7xx_it.c linguist-generated
+STM32GpsSimulator/Core/Inc/stm32f7xx_hal_conf.h linguist-generated
+STM32GpsSimulator/Core/Inc/stm32f7xx_it.h linguist-generated
