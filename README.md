@@ -130,7 +130,7 @@ The project was developed and tested using real embedded hardware. The STM32 NUC
 
 | Category | Technologies |
 |----------|--------------|
-| Languages | C11, C++17 |
+| Languages | C11, C++ |
 | Embedded Platforms | STM32 HAL, Embedded Linux |
 | Operating Systems | Ubuntu 24.04 LTS, Debian 13.5 (BeagleBone Green) |
 | Development Tools | STM32CubeIDE, STM32CubeMX, Visual Studio Code |
