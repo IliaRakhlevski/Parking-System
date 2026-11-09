@@ -1,0 +1,23 @@
+# STM32CubeIDE build output
+STM32GpsSimulator/Debug/
+STM32GpsSimulator/Release/
+
+# Object files
+*.o
+
+# Linux build targets
+BbgClient/bbg_client
+BbgClient/bbg_client_arm
+Database/database_test
+TcpServer/tcp_server_test
+PriceUpdater/price_updater
+Libraries/Config/config_test
+Libraries/Logger/logger_test
+Libraries/Queue/shared_queue_test
+Libraries/SharedMemory/shared_memory_test
+Libraries/SQLiteDatabase/sqlite_database_test
+
+# Runtime files
+Database/parking.db
+Database/database.pid
+Logs/
