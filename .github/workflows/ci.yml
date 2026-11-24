@@ -8,8 +8,10 @@
 #     UndefinedBehaviorSanitizer (memory errors, leaks, undefined behavior).
 #   BeagleBone Green:
 #     3. BbgClient cross-compiles for ARM with Makefile.arm.
+#   STM32 (Nucleo-F756ZG):
+#     4. STM32GpsSimulator firmware builds with arm-none-eabi-gcc.
 #
-# Not covered here (needs the real boards): STM32 firmware, BbgClient over I2C.
+# Not covered here (needs the real boards): running the firmware, I2C between the boards.
 name: CI
 
 on:
@@ -116,3 +118,18 @@ jobs:
         run: |
           file bbg_client_arm
           file bbg_client_arm | grep -q "ARM"
+
+  stm32-firmware-build:
+    name: STM32 - GpsSimulator firmware build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install GNU Arm Embedded Toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-arm-none-eabi libnewlib-arm-none-eabi
+
+      - name: Build firmware
+        run: make -C STM32GpsSimulator
