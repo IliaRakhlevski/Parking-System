@@ -2,6 +2,9 @@
 STM32GpsSimulator/Debug/
 STM32GpsSimulator/Release/
 
+# Command-line (Makefile) build output
+STM32GpsSimulator/build/
+
 # Object files
 *.o
 
