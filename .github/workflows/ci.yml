@@ -1,0 +1,72 @@
+# CI for the Linux (PC) side of Parking-System.
+#
+# What it checks on every push to main and on every pull request:
+#   1. Build: all Linux programs and library tests compile.
+#   2. Smoke tests: the library test programs run, exit with 0 and do not hang.
+#
+# Not covered here (needs the real boards): STM32 firmware, BbgClient over I2C.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:          # "Run workflow" button on the Actions tab
+
+permissions:
+  contents: read
+
+jobs:
+  pc-build-and-smoke-tests:
+    name: Linux PC - build and smoke tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libsqlite3-dev
+
+      # ---------- 1. Build ----------
+      - name: Build libraries
+        run: |
+          make -C Libraries/Logger
+          make -C Libraries/Config
+          make -C Libraries/SharedMemory
+          make -C Libraries/Queue
+          make -C Libraries/SQLiteDatabase
+
+      - name: Build applications
+        run: |
+          make -C TcpServer
+          make -C Database
+          make -C PriceUpdater
+          make -C BbgClient
+
+      # ---------- 2. Smoke tests ----------
+      # The programs write their logs to <repo>/Logs, which is not in git.
+      - name: Create Logs directory
+        run: mkdir -p Logs
+
+      # Each program runs from its own folder (relative paths), with a time limit.
+      - name: Test Logger
+        working-directory: Libraries/Logger
+        run: timeout 30 ./logger_test
+
+      - name: Test Config
+        working-directory: Libraries/Config
+        run: timeout 30 ./config_test
+
+      - name: Test SharedMemory
+        working-directory: Libraries/SharedMemory
+        run: timeout 30 ./shared_memory_test
+
+      - name: Test Queue
+        working-directory: Libraries/Queue
+        run: timeout 30 ./shared_queue_test
+
+      - name: Test SQLiteDatabase
+        working-directory: Libraries/SQLiteDatabase
+        run: timeout 30 ./sqlite_database_test
