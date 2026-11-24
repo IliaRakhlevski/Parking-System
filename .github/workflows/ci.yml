@@ -27,6 +27,7 @@ jobs:
   pc-build-and-smoke-tests:
     name: Linux PC - ${{ matrix.name }}
     runs-on: ubuntu-latest
+    timeout-minutes: 15        # stop a stuck job instead of waiting up to 6 hours
 
     strategy:
       fail-fast: false        # one red variant must not stop the other
@@ -99,6 +100,7 @@ jobs:
   bbg-cross-build:
     name: BeagleBone Green - BbgClient ARM build
     runs-on: ubuntu-latest
+    timeout-minutes: 15        # stop a stuck job instead of waiting up to 6 hours
 
     steps:
       - uses: actions/checkout@v4
@@ -122,6 +124,7 @@ jobs:
   stm32-firmware-build:
     name: STM32 - GpsSimulator firmware build
     runs-on: ubuntu-latest
+    timeout-minutes: 15        # stop a stuck job instead of waiting up to 6 hours
 
     steps:
       - uses: actions/checkout@v4
@@ -129,7 +132,7 @@ jobs:
       - name: Install GNU Arm Embedded Toolchain
         run: |
           sudo apt-get update
-          sudo apt-get install -y gcc-arm-none-eabi libnewlib-arm-none-eabi
+          sudo apt-get install -y --no-install-recommends gcc-arm-none-eabi libnewlib-arm-none-eabi
 
       - name: Build firmware
         run: make -C STM32GpsSimulator
