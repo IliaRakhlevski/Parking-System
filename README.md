@@ -1,5 +1,7 @@
 # Parking-System
 
+[![CI](https://github.com/IliaRakhlevski/Parking-System/actions/workflows/ci.yml/badge.svg)](https://github.com/IliaRakhlevski/Parking-System/actions/workflows/ci.yml)
+
 ## [Real Time Group](https://rt-ed.co.il/) – a multi-disciplinary Real-Time O.S. and Embedded Software Solutions Center, providing consulting, development, integration, training, and support solutions.<br/>
 
 The project implements a distributed C/C++ parking management system built around STM32, BeagleBone Green running Embedded Linux, and a Linux server host. It combines embedded firmware, multi-process Linux applications, TCP/IP networking, inter-process communication (IPC), and an SQLite database into a complete end-to-end system. The architecture consists of multiple independent applications communicating through TCP/IP, shared memory, unnamed pipes, I²C, and POSIX signals: the STM32 firmware and the BeagleBone client form the embedded side, while the TCP server, the database service, and the price-update utility run on standard Linux. The system demonstrates modular software design, multi-process programming, concurrent request processing, and integration between Linux, Embedded Linux, and STM32 hardware.
