@@ -1,10 +1,13 @@
-# CI for the Linux (PC) side of Parking-System.
+# CI for Parking-System.
 #
 # What it checks on every push to main and on every pull request:
-#   1. Build: all Linux programs and library tests compile.
-#   2. Smoke tests: the library test programs run, exit with 0 and do not hang.
-# Both are done twice: a normal build, and a build with AddressSanitizer +
-# UndefinedBehaviorSanitizer (memory errors, leaks, undefined behavior).
+#   Linux PC side:
+#     1. Build: all Linux programs and library tests compile.
+#     2. Smoke tests: the library test programs run, exit with 0 and do not hang.
+#     Both are done twice: a normal build, and a build with AddressSanitizer +
+#     UndefinedBehaviorSanitizer (memory errors, leaks, undefined behavior).
+#   BeagleBone Green:
+#     3. BbgClient cross-compiles for ARM with Makefile.arm.
 #
 # Not covered here (needs the real boards): STM32 firmware, BbgClient over I2C.
 name: CI
@@ -90,3 +93,26 @@ jobs:
       - name: Test SQLiteDatabase
         working-directory: Libraries/SQLiteDatabase
         run: timeout 30 ./sqlite_database_test
+
+  bbg-cross-build:
+    name: BeagleBone Green - BbgClient ARM build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install ARM cross-compiler
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-arm-linux-gnueabihf
+
+      - name: Build BbgClient for ARM
+        working-directory: BbgClient
+        run: make -f Makefile.arm
+
+      # Make sure the result really is an ARM executable, not an x86 one.
+      - name: Check the binary is ARM
+        working-directory: BbgClient
+        run: |
+          file bbg_client_arm
+          file bbg_client_arm | grep -q "ARM"
