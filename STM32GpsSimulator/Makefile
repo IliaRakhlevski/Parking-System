@@ -48,8 +48,9 @@ CFLAGS := $(MCU) $(DEFS) $(INCS) \
 
 ASFLAGS := $(MCU) $(DEFS) -g3 -x assembler-with-cpp --specs=nano.specs
 
+# -u _printf_float: printf("%f") support, enabled in the CubeIDE project settings.
 LDFLAGS := $(MCU) -T$(LDSCRIPT) \
-	--specs=nosys.specs --specs=nano.specs \
+	--specs=nosys.specs --specs=nano.specs -u _printf_float \
 	-Wl,-Map=$(BUILD_DIR)/$(TARGET).map -Wl,--gc-sections -static \
 	-Wl,--start-group -lc -lm -Wl,--end-group
 
