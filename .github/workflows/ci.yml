@@ -3,6 +3,8 @@
 # What it checks on every push to main and on every pull request:
 #   1. Build: all Linux programs and library tests compile.
 #   2. Smoke tests: the library test programs run, exit with 0 and do not hang.
+# Both are done twice: a normal build, and a build with AddressSanitizer +
+# UndefinedBehaviorSanitizer (memory errors, leaks, undefined behavior).
 #
 # Not covered here (needs the real boards): STM32 firmware, BbgClient over I2C.
 name: CI
@@ -18,8 +20,26 @@ permissions:
 
 jobs:
   pc-build-and-smoke-tests:
-    name: Linux PC - build and smoke tests
+    name: Linux PC - ${{ matrix.name }}
     runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false        # one red variant must not stop the other
+      matrix:
+        include:
+          - name: build and smoke tests
+            cc: gcc
+            cxx: g++
+          - name: ASan + UBSan
+            # The Makefiles are not changed: the compiler command itself
+            # carries the sanitizer flags (used for compiling and linking).
+            cc: gcc -fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer -g
+            cxx: g++ -fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer -g
+
+    env:
+      CC_CMD: ${{ matrix.cc }}
+      CXX_CMD: ${{ matrix.cxx }}
+      UBSAN_OPTIONS: print_stacktrace=1
 
     steps:
       - uses: actions/checkout@v4
@@ -32,18 +52,18 @@ jobs:
       # ---------- 1. Build ----------
       - name: Build libraries
         run: |
-          make -C Libraries/Logger
-          make -C Libraries/Config
-          make -C Libraries/SharedMemory
-          make -C Libraries/Queue
-          make -C Libraries/SQLiteDatabase
+          make -C Libraries/Logger         CC="$CC_CMD" CXX="$CXX_CMD"
+          make -C Libraries/Config         CC="$CC_CMD" CXX="$CXX_CMD"
+          make -C Libraries/SharedMemory   CC="$CC_CMD" CXX="$CXX_CMD"
+          make -C Libraries/Queue          CC="$CC_CMD" CXX="$CXX_CMD"
+          make -C Libraries/SQLiteDatabase CC="$CC_CMD" CXX="$CXX_CMD"
 
       - name: Build applications
         run: |
-          make -C TcpServer
-          make -C Database
-          make -C PriceUpdater
-          make -C BbgClient
+          make -C TcpServer    CC="$CC_CMD" CXX="$CXX_CMD"
+          make -C Database     CC="$CC_CMD" CXX="$CXX_CMD"
+          make -C PriceUpdater CC="$CC_CMD" CXX="$CXX_CMD"
+          make -C BbgClient    CC="$CC_CMD" CXX="$CXX_CMD"
 
       # ---------- 2. Smoke tests ----------
       # The programs write their logs to <repo>/Logs, which is not in git.
