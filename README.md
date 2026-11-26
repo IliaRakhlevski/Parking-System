@@ -4,7 +4,7 @@
 
 *Course project · Embedded Linux · [Real Time College](https://rt-ed.co.il/) · 2026*
 
-The project implements a distributed C/C++ parking management system built around STM32, BeagleBone Green running Embedded Linux, and a Linux server host. It combines embedded firmware, multi-process Linux applications, TCP/IP networking, inter-process communication (IPC), and an SQLite database into a complete end-to-end system. The architecture consists of multiple independent applications communicating through TCP/IP, shared memory, unnamed pipes, I²C, and POSIX signals: the STM32 firmware and the BeagleBone client form the embedded side, while the TCP server, the database service, and the price-update utility run on standard Linux. The system demonstrates modular software design, multi-process programming, concurrent request processing, and integration between Linux, Embedded Linux, and STM32 hardware.
+The project implements a distributed C and C++11 parking management system built around STM32, BeagleBone Green running Embedded Linux, and a Linux server host. It combines embedded firmware, multi-process Linux applications, TCP/IP networking, inter-process communication (IPC), and an SQLite database into a complete end-to-end system. The architecture consists of multiple independent applications communicating through TCP/IP, shared memory, unnamed pipes, I²C, and POSIX signals: the STM32 firmware and the BeagleBone client form the embedded side, while the TCP server, the database service, and the price-update utility run on standard Linux. The system demonstrates modular software design, multi-process programming, concurrent request processing, and integration between Linux, Embedded Linux, and STM32 hardware.
 
 ---
 
@@ -21,7 +21,7 @@ The project demonstrates:
 - concurrent request processing with POSIX threads;
 - persistent parking data management using SQLite;
 - automatic application startup and supervision through `systemd`;
-- reusable and modular software architecture in C and C++.
+- reusable and modular software architecture in C and C++11.
 
 ---
 
@@ -132,7 +132,7 @@ The project was developed and tested using real embedded hardware. The STM32 NUC
 
 | Category | Technologies |
 |----------|--------------|
-| Languages | C11, C++ |
+| Languages | C11, C++11 |
 | Embedded Platforms | STM32 HAL, Embedded Linux |
 | Operating Systems | Ubuntu 24.04 LTS, Debian 13.5 (BeagleBone Green) |
 | Development Tools | STM32CubeIDE, STM32CubeMX, Visual Studio Code |
