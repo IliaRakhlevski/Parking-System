@@ -1,6 +1,7 @@
 # CI for Parking-System.
 #
-# What it checks on every push to main and on every pull request:
+# What it checks on every push to main and on every pull request
+# (not for documentation-only changes):
 #   Linux PC side:
 #     1. Build: all Linux programs and library tests compile.
 #     2. Smoke tests: the library test programs run, exit with 0 and do not hang.
@@ -17,8 +18,16 @@ name: CI
 on:
   push:
     branches: [main]
+    paths-ignore:             # documentation only: nothing to build or test
+      - "**.md"
+      - "Docs/Images/**"
+      - "LICENSE"
   pull_request:
-  workflow_dispatch:          # "Run workflow" button on the Actions tab
+    paths-ignore:
+      - "**.md"
+      - "Docs/Images/**"
+      - "LICENSE"
+  workflow_dispatch:         # "Run workflow" button on the Actions tab
 
 permissions:
   contents: read
